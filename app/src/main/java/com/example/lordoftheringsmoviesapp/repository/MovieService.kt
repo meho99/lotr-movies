@@ -7,11 +7,16 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.Path
 
 interface MovieService {
     @GET("/v2/movie")
     @Headers("Authorization: Bearer arK8HgB4d1dUgl-EY-mU")
     suspend fun getMovieResponse(): Response<MovieResponse>
+
+    @GET("/v2/movie/{id}")
+    @Headers("Authorization: Bearer arK8HgB4d1dUgl-EY-mU")
+    suspend fun getMovieDetailsResponse(@Path(value = "id")  id: String): Response<MovieResponse>
 
     companion object {
         private const val MOVIE_URL = "https://the-one-api.dev/"

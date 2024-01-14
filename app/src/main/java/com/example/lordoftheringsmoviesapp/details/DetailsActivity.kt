@@ -1,8 +1,9 @@
-package com.example.lordoftheringsmoviesapp
+package com.example.lordoftheringsmoviesapp.details
 
-import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -13,10 +14,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,147 +25,109 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lordoftheringsmoviesapp.ui.theme.LordOfTheRIngsMoviesAppTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import coil.compose.AsyncImage
-import com.example.lordoftheringsmoviesapp.details.DetailsActivity
+import com.example.lordoftheringsmoviesapp.DisplayMovies
+import com.example.lordoftheringsmoviesapp.MainViewModel
+import com.example.lordoftheringsmoviesapp.Movie
+import com.example.lordoftheringsmoviesapp.MyErrorView
+import com.example.lordoftheringsmoviesapp.MyLoadingView
+import com.example.lordoftheringsmoviesapp.R
+import com.example.lordoftheringsmoviesapp.UiState
 import com.example.lordoftheringsmoviesapp.repository.Movie
+import com.example.lordoftheringsmoviesapp.ui.theme.LordOfTheRIngsMoviesAppTheme
 import kotlin.random.Random
 
-class MainActivity : ComponentActivity() {
-    private val viewModel: MainViewModel by viewModels()
+class DetailsActivity : ComponentActivity() {
+    private val viewModel: DetailsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel.getData()
+
+        val id = intent.getStringExtra("CUSTOM_KEY")
+        if (id != null) {
+            Toast.makeText(this, "details id: $id", Toast.LENGTH_SHORT).show()
+            viewModel.getData(id)
+        } else {
+            Toast.makeText(this, "Object id not defined", Toast.LENGTH_SHORT).show()
+        }
+
         setContent {
             LordOfTheRIngsMoviesAppTheme(darkTheme = true) {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF292929)) {
 
-                    MainView(
-                        viewModel = viewModel,
-                        onClick = { id-> navigateToDetailsActivity(id) }
+                    DetailsView(
+                        viewModel = viewModel
                     )
                 }
             }
         }
     }
-
-    fun navigateToDetailsActivity(id: String) {
-        val intent = Intent(this, DetailsActivity::class.java)
-        intent.putExtra("CUSTOM_KEY", id)
-        startActivity(intent)
-    }
 }
 
 @Composable
-fun MainView(viewModel: MainViewModel, onClick: (String) -> Unit) {
+fun DetailsView(viewModel: DetailsViewModel) {
     val uiState by viewModel.immutableMovieData.observeAsState(UiState())
 
     when {
-        uiState.isLoading -> { MyLoadingView() }
-
-        uiState.error != null -> { MyErrorView(uiState.error) }
-
-        uiState.data != null -> { uiState.data?.let { DisplayMovies(
-            movies = it,
-            onClick = { id -> onClick.invoke(id)})
-        } }
-    }
-}
-
-@Composable
-fun MyErrorView(errorMessage: String? = "") {
-        Text(
-            text = "Error in fetching data: $errorMessage",
-            color = Color.Red,
-            fontSize =19.sp,
-            fontStyle = FontStyle.Italic,
-        )
-}
-
-@Composable
-fun MyLoadingView() {
-        CircularProgressIndicator(
-            modifier = Modifier.width(20.dp),
-            color = Color.White,
-
-        )
-}
-
-
-@Composable
-fun DisplayMovies(movies: List<Movie>, onClick: (String) -> Unit) {
-    val images = arrayOf(
-        R.drawable.unexpected_journey,
-        R.drawable.desolation_of_smaug,
-        R.drawable.battle_of_five_armies,
-        R.drawable.the_two_towers
-    )
-
-    if (movies.isNotEmpty()) {
-        Column {
-            Text(
-                text = "Movies List",
-                fontSize =15.sp,
-                fontStyle = FontStyle.Italic,
-                color = Color.White,
-            )
-
-            Spacer(
-                modifier = Modifier.size(10.dp),
-            )
-
-            LazyColumn {
-
-                items(movies) {movie ->
-                    Log.d("MainActivity", "${movie.name}")
-                    Movie(
-                        name = movie.name,
-                        runtimeInMinutes = movie.runtimeInMinutes,
-                        rottenTomatoesScore = movie.rottenTomatoesScore,
-                        boxOfficeRevenueInMillions = movie.boxOfficeRevenueInMillions,
-                        image = painterResource(id = images[Random.nextInt(images.size)]),
-                        onClick = { id -> onClick.invoke(id) },
-                        id = movie._id,
-                    )
-                }
-            }
+        uiState.isLoading -> {
+            MyLoadingView()
         }
 
+        uiState.error != null -> {
+            MyErrorView(uiState.error)
+        }
+
+        uiState.data != null -> {
+            uiState.data?.let {
+                DisplayMovieDetails(
+                    id = it._id,
+                    name = it.name,
+                    runtimeInMinutes = it.runtimeInMinutes,
+                    rottenTomatoesScore = it.rottenTomatoesScore,
+                    boxOfficeRevenueInMillions = it.boxOfficeRevenueInMillions
+                )
+            }
+        }
     }
 }
 
-
 @Composable
-fun Movie(
+fun DisplayMovieDetails(
+    id: String,
     name: String,
     runtimeInMinutes: Int,
-    image: Painter,
     rottenTomatoesScore: Double,
     boxOfficeRevenueInMillions: Double,
-    onClick: (String) -> Unit,
-    id: String
 ) {
+
     val hours: Int = runtimeInMinutes/60
     val minutes: Int = runtimeInMinutes%60
 
-    // Assume that name is unique
+
     Column(
         modifier = Modifier
-            .padding(all = 5.dp)
-            .clickable { onClick.invoke(id) }
+            .padding(all = 10.dp)
     ) {
+        Text(
+            text = "Movie Details: $id",
+            fontSize =15.sp,
+            fontStyle = FontStyle.Italic,
+            color = Color.White,
+        )
+
+        Spacer(
+            modifier = Modifier.size(10.dp),
+        )
+
         Box(
             Modifier
                 .fillMaxWidth()
@@ -175,19 +136,17 @@ fun Movie(
             Row(Modifier
                 .padding(all = 5.dp)
             ) {
-                Image(
-                    modifier = Modifier.width(100.dp),
-                    painter = image,
-                    contentDescription = null
-                )
                 Column(Modifier.padding(start = 5.dp)) {
+
                     Text(
                         text = "\"$name\"",
-                        fontSize =19.sp,
+                        fontSize =30.sp,
                         fontStyle = FontStyle.Italic,
-                        color = Color.White
+                        color = Color.White,
                     )
-
+                    Spacer(
+                        modifier = Modifier.size(20.dp),
+                    )
 
                     Row {
                         Spacer(
@@ -202,7 +161,7 @@ fun Movie(
                     }
                     Row (){
                         Image(
-                            modifier = Modifier.width(16.dp),
+                            modifier = Modifier.width(18.dp),
                             painter = painterResource(R.drawable.rotten_tomatoes),
                             contentDescription = null
                         )
@@ -228,7 +187,7 @@ fun Movie(
                     }
                     Row (){
                         Image(
-                            modifier = Modifier.width(16.dp),
+                            modifier = Modifier.width(20.dp),
                             painter = painterResource(R.drawable.clock),
                             contentDescription = null
                         )
@@ -253,7 +212,7 @@ fun Movie(
                     }
                     Row (){
                         Image(
-                            modifier = Modifier.width(16.dp),
+                            modifier = Modifier.width(20.dp),
                             painter = painterResource(R.drawable.dollar),
                             contentDescription = null
                         )
@@ -268,5 +227,5 @@ fun Movie(
             }
         }
     }
-
 }
+
